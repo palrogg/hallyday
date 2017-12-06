@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+  .axis path,
+  .axis line {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+  }
+  body, text{
+    font-family: sans-serif;
+  }
+  .axis text {
+      font-family: sans-serif;
+      font-size: 11px;
+  }
+  .heatmap{
+    position: relative;
+  }
+</style>
+<h2>Johnny Hallyday: 32 albums classés no 1 en France</h2>
+<div class="heatmap"></div>
+<p>Sources: <a href="https://en.wikipedia.org/wiki/Johnny_Hallyday_discography">discographie de Johnny Halliday sur en.wikipedia.org</a>, <a href="http://lescharts.com/showinterpret.asp?interpret=Johnny+Hallyday">lescharts.com</a></p>
+<p>Code basé sur <a href="https://gist.github.com/nanu146/df39c69d1d0cb1b71429b2cd47e2a189">«Heatmap using d3.js»</a> par Bharadwaj Kopparthi. Licence: <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GPLv3</a></p>
+<script src="//d3js.org/d3.v4.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.0/d3-legend.min.js"></script>
+<script>
+
+    /*
+
+    negative color scales in increasing magnitude
+    #EF9FAE, #C76475, #781426
+
+    positive color scales in increasing magnitude
+    #ABDB92, #77B75B, #2E6E12
+
+    */
+
+    /* supporting functions */
+
+    // Standard deviation
+    function RMS(arr){
+        return Math.pow(arr.reduce(function(acc,pres){
+            return acc+ Math.pow(pres,2);
+        })/arr.length,.5)
+    }
+
+    // mean
+    function mean(arr){
+        return arr.reduce(function(acc,prev){
+            return acc+prev;
+        })/arr.length;
+    }
+
+  var lPatchWidth=200;
+  var itemSize = 15,
+      cellSize = itemSize - 4,
+      margin = {top: 0, right: 20, bottom: 0, left: 40};
+
+    var data;
+
+  var width = 500 - margin.right - margin.left,
+      height = 730 - margin.top - margin.bottom;
+  var colorScale;
+
+  //colorHold=["#781426","#C76475","#EF9FAE","#ABDB92","#77B75B","#2E6E12"]
+  colorHold = ['#fee5d9','#fcbba1','#fc9272','#fb6a4a','#de2d26','#a50f15'];
+  colorHold.reverse()
+  colorLText=["< -66%","-66% to -33%","-33% to 0%","0% to 33%","33% to 66%","> 66%"]
+  //colorLText=["< -66%","-66% to -33%","-33% to 0%","0% to 33%","33% to 66%","> 66%"]
+
+  function bandClassifier(val,multiplier)
+  {
+        if(val>=0)
+        {
+            return (Math.floor((val*multiplier)/(.33*multiplier))+1)>3?3:Math.floor((val*multiplier)/(.33*multiplier))+1
+        }
+        else{
+            return (Math.floor((val*multiplier)/(.33*multiplier)))<-3?-3:Math.floor((val*multiplier)/(.33*multiplier))
+        }
+  }
+
+
+  window.onload=function(){
+      d3.csv('data.csv', function ( response ) {
+
+    data = response.map(function( item ) {
+        var newItem = {};
+        newItem.country = item.x;
+        newItem.product = item.y;
+        newItem.value = +item.value;
+        newItem.Album = item.Album;
+
+        return newItem;
+    })
+
+
+    invertcolors=0;
+    // Inverting color scale
+    if(invertcolors){
+        colorHold.reverse();
+
+
+    }
+
+    var x_elements = d3.set(data.map(function( item ) { return item.product; } )).values(),
+        y_elements = d3.set(data.map(function( item ) { return item.country; } )).values();
+
+    var xScale = d3.scaleBand()
+        .domain(x_elements)
+        .range([0, x_elements.length * itemSize])
+        .paddingInner(20).paddingOuter(cellSize/2)
+
+    var xAxis = d3.axisBottom()
+        .scale(xScale)
+        .tickFormat(function (d) {
+            return d;
+        });
+
+    var yScale = d3.scaleBand()
+        .domain(y_elements)
+        .range([0, y_elements.length * itemSize])
+        .paddingInner(.2).paddingOuter(.2);
+
+    var yAxis = d3.axisLeft()
+        .scale(yScale)
+        .tickFormat(function (d) {
+            return d;
+        });
+
+
+    // Finding the mean of the data
+    var mean=window.mean(data.map(function(d){return +d.value}));
+
+    //setting percentage change for value w.r.t average
+    data.forEach(function(d){
+        d.perChange=(d.value-mean)/mean
+    })
+
+    colorScale = d3.scaleOrdinal()
+        .domain([1,2,5,15,50,100])
+        .range(colorHold);
+
+    var rootsvg = d3.select('.heatmap')
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+    var svg=rootsvg.append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // tooltip
+    tooltip=d3.select("body").append("div").style("width","240px").style("height","40px").style("background","#C3B3E5")
+    .style("opacity","1").style("position","absolute").style("visibility","hidden").style("box-shadow","0px 0px 6px #7861A5").style("padding","10px");
+    toolval=tooltip.append("div");
+
+
+    var cells = svg.selectAll('rect')
+        .data(data)
+        .enter().append('g').append('rect')
+        .attr('class', 'cell')
+        .attr('width', cellSize)
+        .attr('height', cellSize)
+        .attr('y', function(d) { return yScale(d.country); })
+        .attr('x', function(d) { return xScale(d.product)-cellSize/2; })
+        .attr('fill', function(d) {
+          if(d.value == 0){
+            return 'grey';
+          }
+          return colorScale(window.bandClassifier(d.perChange,100));
+        })
+        .attr("rx",3)
+        .attr("ry",3)
+        .on("mouseover",function(d){
+            //d3.select(this).attr("fill","#655091");
+            d3.select(this).style("stroke","orange").style("stroke-width","3px")
+            //d3.select(".trianglepointer").transition().delay(100).attr("transform","translate("+(-((lPatchWidth/colorScale.range().length)/2+(colorScale.domain().indexOf(bandClassifier(d.perChange,100))*(lPatchWidth/colorScale.range().length) )))+",0)");
+
+            d3.select(".LegText").select("text").text(colorLText[colorScale.domain().indexOf(bandClassifier(d.perChange,100))])
+
+
+        })
+        .on("mouseout",function(){
+            //d3.select(this).attr('fill', function(d) { return colorScale(window.bandClassifier(d.perChange,100));});
+            d3.select(this).style("stroke","none");
+            tooltip.style("visibility","hidden");
+        })
+        .on("mousemove",function(d){
+            tooltip.style("visibility","visible")
+            .style("top",(d3.event.pageY-30)+"px").style("left",(d3.event.pageX+20)+"px");
+
+            var valeur = d.value;
+            if (valeur == 0){
+              valeur = 'n/a';
+            }
+
+            tooltip.select("div").html("<strong>"+d.Album+"</strong><br/>Classement France: "+(valeur))
+
+        })
+
+
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+        .selectAll('text')
+        .attr('font-weight', 'normal');
+
+/*
+// no x axis
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform","translate(0,"+(y_elements.length * itemSize +cellSize/2)+")")
+        .call(xAxis)
+        .selectAll('text')
+        .attr('font-weight', 'normal')
+        .style("text-anchor", "end")
+        .attr("dx", "-.8em")
+        .attr("dy", "-.5em")
+        .attr("transform", function (d) {
+            return "rotate(-65)";
+        });
+*/
+
+    // Legends section
+
+
+var linear = d3.scaleLinear()
+  .domain([1,2,5,15,50,100])
+  .range(colorHold);
+
+var svg = d3.select("svg");
+
+svg.append("g")
+  .attr("class", "legendLinear")
+  .attr("transform", "translate(160,20)");
+
+var legendLinear = d3.legendColor()
+  .shapeWidth(30)
+  .orient('horizontal')
+  .scale(linear)
+  .labels(['1', '2+', '5+', '15+', '50+']);
+
+svg.select(".legendLinear")
+  .call(legendLinear);
+
+    // Heading
+    /*
+    rootsvg.append("g")
+    .attr("transform","translate(0,30)")
+    .append("text")
+    .attr("x",(width+margin.right+margin.left)/2)
+    .attr('font-weight', 'bold')
+    .attr('font-size', '22px')
+    .attr('font-family', 'Segoe UI bold')
+    .style("text-anchor", "middle")
+    .text("Johnny Hallyday: xx ans de carrière, 32 albums classés premiers en France")
+*/
+
+  });
+  }
+</script>
