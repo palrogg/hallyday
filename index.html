@@ -19,7 +19,7 @@
     position: relative;
   }
 </style>
-<h2>Johnny Hallyday: 30 (?) albums classés no 1 en France</h2>
+<h2>Johnny Hallyday: les albums classés no 1 en France</h2>
 <div class="heatmap"></div>
 <p>Sources: <a href="https://en.wikipedia.org/wiki/Johnny_Hallyday_discography">discographie de Johnny Halliday sur en.wikipedia.org</a>, <a href="http://lescharts.com/showinterpret.asp?interpret=Johnny+Hallyday">lescharts.com</a></p>
 <p>Code basé sur <a href="https://gist.github.com/nanu146/df39c69d1d0cb1b71429b2cd47e2a189">«Heatmap using d3.js»</a> par Bharadwaj Kopparthi. Licence: <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GPLv3</a></p>
@@ -39,8 +39,8 @@
   var width = 500 - margin.right - margin.left,
       height = 730 - margin.top - margin.bottom;
 
-
-  colorHold = ['#fee5d9','#fcbba1','#fc9272','#fb6a4a','#de2d26','#FFD700'];
+  var colorDomain = [0,1.1,2.1,15,50,100];
+  colorHold = ['#fcbba1','#fc9272','#fb6a4a','#de2d26','#FFD700', '#ccc'];
   colorHold.reverse()
 
   window.onload=function(){
@@ -66,7 +66,6 @@
         .paddingInner(20).paddingOuter(cellSize/2)
 
     var xAxis = d3.axisBottom()
-        .scale(xScale)
         .tickFormat(function (d) {
             return d;
         });
@@ -82,8 +81,8 @@
             return d;
         });
 
-    var colorScale = d3.scaleOrdinal()
-        .domain([1,2,5,15,50,100])
+    var colorScale = d3.scaleThreshold()
+        .domain(colorDomain)
         .range(colorHold);
 
     var rootsvg = d3.select('.heatmap')
@@ -145,8 +144,8 @@
     // Legends section
 
 
-var linear = d3.scaleLinear()
-  .domain([1,2,5,15,50,100])
+var linear = d3.scaleThreshold()
+  .domain(colorDomain)
   .range(colorHold);
 
 var svg = d3.select("svg");
@@ -156,27 +155,13 @@ svg.append("g")
   .attr("transform", "translate(160,20)");
 
 var legendLinear = d3.legendColor()
-  .shapeWidth(30)
-  .orient('horizontal')
+  .shapeWidth(40)
+  .orient('vertical')
   .scale(linear)
-  .labels(['1', '2+', '5+', '15+', '50+']);
+  .labels(['n/a', 'No 1', '2+', '5+', '15+', '50+']);
 
 svg.select(".legendLinear")
   .call(legendLinear);
-
-    // Heading
-    /*
-    rootsvg.append("g")
-    .attr("transform","translate(0,30)")
-    .append("text")
-    .attr("x",(width+margin.right+margin.left)/2)
-    .attr('font-weight', 'bold')
-    .attr('font-size', '22px')
-    .attr('font-family', 'Segoe UI bold')
-    .style("text-anchor", "middle")
-    .text("Johnny Hallyday: xx ans de carrière, 32 albums classés premiers en France")
-*/
-
   });
   }
 </script>
