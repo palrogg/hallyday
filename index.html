@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,600" rel="stylesheet">
   <style>
   *{
     margin: 0;
@@ -18,10 +19,9 @@
     shape-rendering: crispEdges;
   }
   body, text{
-    font-family: sans-serif;
+    font-family: 'Montserrat', sans-serif;
   }
   .axis text {
-    font-family: sans-serif;
     font-size: 18px;
   }
   .axis text.textlabel{
@@ -144,7 +144,7 @@
 
       let cells = svg.selectAll('circle')
       .data(data)
-      .enter().append('g')
+      .enter()
       .append('circle')
       .attr('class', 'cell')
       .attr('r', cellSize/2)
@@ -224,7 +224,8 @@
         .attr('x2', 160)
         .attr('y2', function(d){ return albumLabels[d]['topShift']})
         .attr('stroke', '#000')
-        .attr('stroke-width', 2)
+        .attr('stroke-opacity', 0.3)
+        .attr('stroke-width', 1)
 
       svg.selectAll('.tick')
         .append("text")
