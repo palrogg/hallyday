@@ -1,6 +1,6 @@
 # Hallyday
 
-A quick viz of Johnny Hallyday’s discography published on his death day.
+A quick viz of Johnny Hallyday’s discography [published on his death day](https://www.tdg.ch/culture/musique/foisci-nuit-retenu-johnny/story/21941303?adsfadfsadfs5605050#hallyday-viz).
 
 ![Preview](preview.png)
 
