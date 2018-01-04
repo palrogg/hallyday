@@ -9,6 +9,9 @@
     margin: 0;
     padding: 0;
   }
+  body{
+    margin: 2px;
+  }
   h2{
     font-size: 20px;
   }
@@ -34,18 +37,24 @@
     shape-rendering: crispEdges;
   }
   .heatmap{
+    margin-top: 20px;
     position: relative;
   }
   .tooltip{
-    padding: 5px;
+    font-size: 14px;
+    padding: 10px;
     width: 240px;
-    background: rgb(195, 179, 229);
+    background: #fff;
     opacity: 1;
     position: absolute;
     visibility: hidden;
-    box-shadow: rgb(120, 97, 165) 0px 0px 6px;
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 0px 12px;
+    border-radius: 3px;
     top: 171px;
     left: 188px;
+  }
+  .credits{
+    font-size: 12px;
   }
   circle.cell, circle.swatch{
     stroke: #da83c2;
@@ -59,8 +68,8 @@
   <h2>Johnny Hallyday: les albums et leur classement dans les ventes en France</h2>
   <p>Touchez ou survolez une case pour afficher le nom de l’album.</p>
   <div class="heatmap"></div>
-  <p>Source: <a href="http://lescharts.com/showinterpret.asp?interpret=Johnny+Hallyday">lescharts.com</a> via <a href="https://en.wikipedia.org/wiki/Johnny_Hallyday_discography">en.wikipedia.org</a>.</p>
-  <p>Design: Mathieu Rudaz, programmation: Paul Ronga, code <a href="https://github.com/palrogg/hallyday">disponible sur GitHub</a> et basé sur <a href="https://bl.ocks.org/nanu146/df39c69d1d0cb1b71429b2cd47e2a189">«Heatmap using d3.js»</a> par Bharadwaj Kopparthi. Licence: <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GPLv3</a></p>
+  <p class="credits">Source: <a href="http://lescharts.com/showinterpret.asp?interpret=Johnny+Hallyday">lescharts.com</a> via <a href="https://en.wikipedia.org/wiki/Johnny_Hallyday_discography">en.wikipedia.org</a>. 
+    Design: Mathieu Rudaz, programmation: Paul Ronga, code <a href="https://github.com/palrogg/hallyday">disponible sur GitHub</a> et basé sur <a href="https://bl.ocks.org/nanu146/df39c69d1d0cb1b71429b2cd47e2a189">«Heatmap using d3.js»</a> par Bharadwaj Kopparthi. Licence: <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GPLv3</a></p>
   <script src="//d3js.org/d3.v4.min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.0/d3-legend.min.js"></script>
   <script>
@@ -214,8 +223,6 @@
       svg.select(".legendthreshold")
       .call(legendthreshold);
 
-      //albumLabels[d]['leftShift']
-      console.log(albumLabels)
       svg.selectAll('.tick')
         .append('line')
         .attr('class', 'textlabelline')
@@ -237,6 +244,14 @@
         .attr("fill", "#000")
         .text(function(d){ return albumLabels[d]['album'] });
 
+      // Manuel legend item horizontal positioning
+      let shiftCells = [0, 72, 165];
+      svg.selectAll('.legendthreshold .cell')
+        .attr('transform', function(i, d){
+          return 'translate(' + shiftCells[d] + ', 0)';
+        });
+
+      // Shift legend labels right to the circles
       svg.selectAll(".label")
         .attr('transform', 'translate(10, 5)')
       });
