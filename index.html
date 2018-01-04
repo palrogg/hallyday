@@ -1,167 +1,264 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<style>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+  *{
+    margin: 0;
+    padding: 0;
+  }
+  h2{
+    font-size: 20px;
+  }
   .axis path,
   .axis line {
     fill: none;
-    stroke: black;
+    stroke: none; /* no rendering */
     shape-rendering: crispEdges;
   }
   body, text{
     font-family: sans-serif;
   }
   .axis text {
-      font-family: sans-serif;
-      font-size: 11px;
+    font-family: sans-serif;
+    font-size: 18px;
+  }
+  .axis text.textlabel{
+    text-anchor: start;
+    font-size: 14px;
+  }
+  .axis .textlabelline{
+    stroke: #000;
+    stroke-width: 1px;
+    shape-rendering: crispEdges;
   }
   .heatmap{
     position: relative;
   }
-</style>
-<h2>Johnny Hallyday: les albums classés no 1 en France</h2>
-<div class="heatmap"></div>
-<p>Sources: <a href="https://en.wikipedia.org/wiki/Johnny_Hallyday_discography">discographie de Johnny Halliday sur en.wikipedia.org</a>, <a href="http://lescharts.com/showinterpret.asp?interpret=Johnny+Hallyday">lescharts.com</a></p>
-<p>Code basé sur <a href="https://gist.github.com/nanu146/df39c69d1d0cb1b71429b2cd47e2a189">«Heatmap using d3.js»</a> par Bharadwaj Kopparthi. Licence: <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GPLv3</a></p>
-<script src="//d3js.org/d3.v4.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.0/d3-legend.min.js"></script>
-<script>
+  .tooltip{
+    padding: 5px;
+    width: 240px;
+    background: rgb(195, 179, 229);
+    opacity: 1;
+    position: absolute;
+    visibility: hidden;
+    box-shadow: rgb(120, 97, 165) 0px 0px 6px;
+    top: 171px;
+    left: 188px;
+  }
+  circle.cell, circle.swatch{
+    stroke: #da83c2;
+  }
+  circle.selected{
+    stroke: orange;
+  }
+  </style>
+</head>
+<body>
+  <h2>Johnny Hallyday: les albums et leur classement dans les ventes en France</h2>
+  <p>Touchez ou survolez une case pour afficher le nom de l’album.</p>
+  <div class="heatmap"></div>
+  <p>Source: <a href="http://lescharts.com/showinterpret.asp?interpret=Johnny+Hallyday">lescharts.com</a> via <a href="https://en.wikipedia.org/wiki/Johnny_Hallyday_discography">en.wikipedia.org</a>.</p>
+  <p>Design: Mathieu Rudaz, programmation: Paul Ronga, code <a href="https://github.com/palrogg/hallyday">disponible sur GitHub</a> et basé sur <a href="https://bl.ocks.org/nanu146/df39c69d1d0cb1b71429b2cd47e2a189">«Heatmap using d3.js»</a> par Bharadwaj Kopparthi. Licence: <a href="https://www.gnu.org/licenses/gpl-3.0.fr.html">GPLv3</a></p>
+  <script src="//d3js.org/d3.v4.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.0/d3-legend.min.js"></script>
+  <script>
 
+  let lPatchWidth=200;
+  let itemSize = 15,
+  cellSize = itemSize - 4,
+  circleRadius = cellSize / 2,
+  margin = {top: 40, right: 20, bottom: 0, left: 60};
 
+  let data;
 
-  var lPatchWidth=200;
-  var itemSize = 15,
-      cellSize = itemSize - 4,
-      margin = {top: 0, right: 20, bottom: 0, left: 40};
+  let width = 420 - margin.right - margin.left,
+  height = 310 - margin.top - margin.bottom;
 
-  var data;
-
-  var width = 500 - margin.right - margin.left,
-      height = 730 - margin.top - margin.bottom;
-
-  var colorDomain = [0,1.1,2.1,15,50,100];
-  colorHold = ['#fcbba1','#fc9272','#fb6a4a','#de2d26','#FFD700', '#ccc'];
-  colorHold.reverse()
+  let colorDomain = [0.1, 1.1];
+  // white, dark purple, light purple
+  let colorHold = ['#fff', '#cc4aa7', '#e3aed5'];
+  let linePadding = 20;
 
   window.onload=function(){
-      d3.csv('data.csv', function ( response ) {
+    d3.csv('data-decades.csv', function ( response ) {
 
-    data = response.map(function( item ) {
-        var newItem = {};
-        newItem.year = item.x;
-        newItem.yearlyCount = item.y;
+      data = response.map(function( item ) {
+        let newItem = {};
+        newItem.decade = item.x;
+        newItem.decadeCount = item.y;
         newItem.value = +item.value;
         newItem.Album = item.Album;
-
+        newItem.line = +item.line;
+        newItem.year = +item.x2;
         return newItem;
-    })
+      })
 
 
-    var x_elements = d3.set(data.map(function( item ) { return item.yearlyCount; } )).values(),
-        y_elements = d3.set(data.map(function( item ) { return item.year; } )).values();
+      let x_elements = d3.set(data.map(function( item ) { return item.decadeCount; } )).values(),
+      y_elements = d3.set(data.map(function( item ) { return item.decade; } )).values();
 
-    var xScale = d3.scaleBand()
-        .domain(x_elements)
-        .range([0, x_elements.length * itemSize])
-        .paddingInner(20).paddingOuter(cellSize/2)
+      let xScale = d3.scaleBand()
+      .domain(x_elements)
+      .range([0, x_elements.length * itemSize])
+      .paddingInner(20).paddingOuter(cellSize/2)
 
-    var xAxis = d3.axisBottom()
-        .tickFormat(function (d) {
-            return d;
-        });
+      let xAxis = d3.axisBottom()
+      .tickFormat(function (d) {
+        return d;
+      });
 
-    var yScale = d3.scaleBand()
-        .domain(y_elements)
-        .range([0, y_elements.length * itemSize])
-        .paddingInner(.2).paddingOuter(.2);
+      let yScale = d3.scaleBand()
+      .domain(y_elements)
+      .range([0, y_elements.length * itemSize * 3 ])
+      .paddingInner(.2).paddingOuter(.2);
 
-    var yAxis = d3.axisLeft()
-        .scale(yScale)
-        .tickFormat(function (d) {
-            return d;
-        });
+      let yAxis = d3.axisLeft()
+      .scale(yScale)
+      .tickFormat(function (d) {
+        return d;
+      });
 
-    var colorScale = d3.scaleThreshold()
-        .domain(colorDomain)
-        .range(colorHold);
+      let colorScale = d3.scaleThreshold()
+      .domain(colorDomain)
+      .range(colorHold);
 
-    var rootsvg = d3.select('.heatmap')
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-    var svg=rootsvg.append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      let rootsvg = d3.select('.heatmap')
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      let svg=rootsvg.append("g")
+      .attr("transform", "translate(" + margin.left + ", " + margin.top + ")");
 
-    // tooltip
-    tooltip=d3.select("body").append("div").style("width","240px").style("height","40px").style("background","#C3B3E5")
-    .style("opacity","1").style("position","absolute").style("visibility","hidden").style("box-shadow","0px 0px 6px #7861A5").style("padding","10px");
-    toolval=tooltip.append("div");
+      // tooltip
+      tooltip = d3.select("body")
+        .append("div")
+        .attr("class", "tooltip");
+
+      toolval = tooltip.append("div");
+
+      let albumLabels = {};
+      let albumLabelNames = ['Rêve et amour', 'Rock à Memphis', 'Cadillac',
+        'Sang pour sang', 'Ma Vérité', 'De l’amour'];
+
+      let cells = svg.selectAll('circle')
+      .data(data)
+      .enter().append('g')
+      .append('circle')
+      .attr('class', 'cell')
+      .attr('r', cellSize/2)
+      .attr('cy', function(d) { return yScale(d.decade) + d.line * 15 + cellSize/2; })
+      .attr('cx', function(d) {
+        if(albumLabelNames.indexOf(d.Album) != -1){
+          albumLabels[d.decade] = {'leftShift': xScale(d.decadeCount), 'topShift': d.line*15 - 11, 'album': d.Album};
+        }
+        return xScale(d.decadeCount);
+      })
+      .attr('fill', function(d) { return colorScale(d.value); })
+      .attr("rx",3)
+      .attr("ry",3)
+      .on("mouseover",function(d){
+        d3.select(this).classed("selected", true)
+      })
+      .on("mouseout",function(){
+        d3.select(this).classed("selected", false)
+        tooltip.style("visibility", "hidden");
+      })
+      .on("mousemove",function(d){
+        tooltip.style("visibility", "visible")
+        .style("top",(d3.event.pageY-30)+"px").style("left",(d3.event.pageX+20)+"px");
+
+        let phrase = ''; //valeur = d.value;//, phrase = `A été ${valeurStr} des ventes en France`;
+
+        if (d.value == 0){
+          phrase = 'N’est pas apparu dans le top des ventes';
+        }else if(d.value == 1){
+          phrase = 'A été no 1 des ventes en France';
+        }else{
+          phrase = "A atteint la " + d.value + "e place dans les ventes en France";
+        }
+
+        tooltip.select("div").html("<strong>"+d.Album+"</strong><br/>" + d.year + '<br />' + phrase );
+      });
 
 
-    var cells = svg.selectAll('rect')
-        .data(data)
-        .enter().append('g').append('rect')
-        .attr('class', 'cell')
-        .attr('width', cellSize)
-        .attr('height', cellSize)
-        .attr('y', function(d) { return yScale(d.year); })
-        .attr('x', function(d) { return xScale(d.yearlyCount)-cellSize/2; })
-        .attr('fill', function(d) {
-          if(d.value == 0){
-            return '#ccc';
-          }
-          return colorScale(d.value);
+      svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .selectAll('text')
+      .attr('font-weight', 'normal');
+
+
+      // Legends section
+
+
+      let threshold = d3.scaleThreshold()
+      .domain(colorDomain)
+      .range(['#cc4aa7', '#e3aed5', '#fff']);
+
+      svg.append("g")
+      .attr("class", "legendthreshold")
+      .attr("transform", "translate(-20, -20)");
+
+      let legendthreshold = d3.legendColor()
+      .shape('circle')
+      .shapeRadius(circleRadius)
+      .shapePadding(90)
+      .orient('horizontal')
+      .scale(threshold)
+      .labels(['Top 1', 'Top 100', 'Non classé'])
+      .labelAlign("start");
+
+
+      svg.select(".legendthreshold")
+      .call(legendthreshold);
+
+      //albumLabels[d]['leftShift']
+      console.log(albumLabels)
+      svg.selectAll('.tick')
+        .append('line')
+        .attr('class', 'textlabelline')
+        .attr("x1", function(d){ return albumLabels[d]['leftShift'] })
+        .attr('y1', function(d){ return albumLabels[d]['topShift']})
+        .attr('x2', 160)
+        .attr('y2', function(d){ return albumLabels[d]['topShift']})
+        .attr('stroke', '#000')
+        .attr('stroke-width', 2)
+
+      svg.selectAll('.tick')
+        .append("text")
+        .attr('class', 'textlabel')
+        .attr("transform", function(d){
+          return "translate(165, " + (albumLabels[d]['topShift']+4) + ")";
         })
-        .attr("rx",3)
-        .attr("ry",3)
-        .on("mouseover",function(d){
-            d3.select(this).style("stroke","orange").style("stroke-width","3px")
-        })
-        .on("mouseout",function(){
-            d3.select(this).style("stroke","none");
-            tooltip.style("visibility","hidden");
-        })
-        .on("mousemove",function(d){
-            tooltip.style("visibility","visible")
-            .style("top",(d3.event.pageY-30)+"px").style("left",(d3.event.pageX+20)+"px");
+        .attr("font-size", "2em")
+        .attr("fill", "#000")
+        .text(function(d){ return albumLabels[d]['album'] });
 
-            var valeur = d.value;
-            if (valeur == 0){
-              valeur = 'n/a';
-            }
-
-            tooltip.select("div").html("<strong>"+d.Album+"</strong><br/>Classement France: "+(valeur))
-        });
+      svg.selectAll(".label")
+        .attr('transform', 'translate(10, 5)')
+      });
 
 
-    svg.append("g")
-        .attr("class", "y axis")
-        .call(yAxis)
-        .selectAll('text')
-        .attr('font-weight', 'normal');
-
-
-    // Legends section
-
-
-var linear = d3.scaleThreshold()
-  .domain(colorDomain)
-  .range(colorHold);
-
-var svg = d3.select("svg");
-
-svg.append("g")
-  .attr("class", "legendLinear")
-  .attr("transform", "translate(160,20)");
-
-var legendLinear = d3.legendColor()
-  .shapeWidth(40)
-  .orient('vertical')
-  .scale(linear)
-  .labels(['n/a', 'No 1', '2+', '5+', '15+', '50+']);
-
-svg.select(".legendLinear")
-  .call(legendLinear);
-  });
   }
 </script>
+
+<script src="https://files.newsnetz.ch/scripts/jquery-1.12.2.min.js"></script>
+<script src="https://files.newsnetz.ch/scripts/dimension_watcher.js"></script>
+<script>
+
+$(window).load(function(){
+  if($(window).width() < 960){
+    DimensionWatcher.enableParentNotification(
+      function() { return undefined },
+      function() { return $("body").height()+30 }
+    );
+  }
+});
+
+</script>
+
+
+</body>
+</html>
